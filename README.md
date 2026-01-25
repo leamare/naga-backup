@@ -4,7 +4,9 @@ Backup and restore Linux system configuration between installations.
 
 Exports the complete list of installed packages (also detects linux distro used and package managers installed), along with listed config files, and restores it on another (compatible) installation.
 
-I made these scripts primarily for my personal use. It was tested primarily with Arch, exporting pacman + aur + flatpak + snap packages, along with the plasma configuration, themes and my personal dotfiles. Any additional improvements are welcomed.
+I made these scripts primarily for my personal use. It was tested primarily with Arch, exporting pacman + aur + flatpak + snap packages, along with the plasma configuration, themes and my personal dotfiles (so the copylists examples are tailored for me).
+
+Any additional improvements are welcome.
 
 The process itself is based on the steps specified in `steps` folder.
 

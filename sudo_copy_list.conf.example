@@ -1,1 +1,44 @@
-sudo_copy_list.conf
+# System configuration files (require sudo)
+# Format: source_path|backup_alias
+# Prefix with ? for optional items (will prompt during restore)
+
+# Boot/Kernel
+# ?/etc/default/grub|grub-default
+# ?/boot/loader/entries|systemd-boot-entries
+?/etc/kernel/cmdline|kernel-cmdline
+#?/etc/mkinitcpio.conf|mkinitcpio
+#?/etc/mkinitcpio.d|mkinitcpio.d
+
+# NVIDIA (optional - only for nvidia systems)
+?/etc/modprobe.d/nvidia.conf|nvidia-modprobe
+?/etc/modprobe.d/nvidia-drm.conf|nvidia-drm-modprobe
+?/etc/X11/xorg.conf.d/10-nvidia.conf|nvidia-xorg
+
+# System services
+#?/etc/systemd/system|systemd-system
+#?/etc/systemd/user|systemd-user
+
+# Network
+#?/etc/NetworkManager/system-connections|nm-connections
+?/etc/hosts|hosts
+#?/etc/hostname|hostname
+
+# Package manager
+#?/etc/pacman.conf|pacman.conf
+#?/etc/pacman.d/mirrorlist|mirrorlist
+#?/etc/apt/sources.list|apt-sources
+#?/etc/apt/sources.list.d|apt-sources.d
+
+# Display/Graphics
+#?/etc/X11/xorg.conf|xorg.conf
+#?/etc/X11/xorg.conf.d|xorg.conf.d
+
+# Audio
+#?/etc/pipewire|pipewire
+#?/etc/pulse|pulseaudio
+
+# Other system configs
+#?/etc/environment|environment
+#?/etc/locale.conf|locale.conf
+#?/etc/vconsole.conf|vconsole.conf
+#?/etc/fstab|fstab

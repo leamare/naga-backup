@@ -1,1 +1,112 @@
-copy_list.conf
+# User configuration files and directories
+# Format: source_path|backup_alias
+# Prefix with ? for optional items (will prompt during restore)
+
+# Shell
+~/.bashrc|bashrc
+~/.bash_profile|bash_profile
+~/.bash_aliases|bash_aliases
+~/.bash_history|bash_history
+# ~/.zshrc|zshrc
+# ~/.zsh_profile|zsh_profile
+# ~/.profile|profile
+# ~/.inputrc|inputrc
+
+# Editors
+~/.vimrc|vimrc
+~/.vim|vim-config
+~/.config/nvim|neovim-config
+~/.config/Code/User|vscode-settings
+# ~/.config/sublime-text|sublime-config
+# ~/.atom|atom-config
+# ~/.config/atom|atom-config-new
+~/.config/cursor|cursor-config
+
+# KDE/Plasma
+~/.config/plasma-workspace|plasma-workspace
+~/.local/share/plasma|plasma-data
+~/.config/kde.org|kde-org
+~/.config/plasmanotifyrc|plasmanotifyrc
+~/.config/kwinrc|kwinrc
+~/.config/kactivitymanagerd-statsrc|kactivitymanagerd-statsrc
+~/.local/share/sddm|sddm
+~/.local/share/kwalletd|kwalletd
+~/.local/share/kscreen|kscreen
+~/.local/share/konsole|konsole
+~/.local/share/knewstuff3|knewstuff3
+~/.local/share/klipper|klipper
+~/.local/share/kded6|kded6
+~/.local/share/kate|kate
+~/.local/share/kactivitymanagerd|kactivitymanagerd
+~/.local/share/dolphin|dolphin
+~/.local/share/color-schemes|color-schemes
+~/.config/kate|kate-config
+~/.config/klassy|klassy
+~/.config/Trolltech.conf|Trolltech.conf
+~/.config/konsolerc|konsolerc
+
+# GNOME/GTK
+#~/.config/dconf|dconf-settings
+#~/.config/gnome-shell|gnome-shell
+
+# XFCE
+#~/.config/xfce4|xfce4
+
+# Window managers
+#?~/.config/i3|i3
+#?~/.config/sway|sway
+#?~/.config/bspwm|bspwm
+#?~/.config/openbox|openbox
+#?~/.config/awesome|awesome
+
+# Terminals
+#~/.config/alacritty|alacritty
+#~/.config/kitty|kitty
+#~/.config/terminator|terminator
+#~/.config/tilix|tilix
+
+# Git
+~/.config/git|git-config
+~/.gitconfig|gitconfig
+~/.netrc|netrc
+
+# Development
+~/.config/npm|npm-config
+~/.npmrc|npmrc
+~/.config/yarn|yarn-config
+~/.config/cargo|cargo-config
+#~/.cargo|cargo-dir
+#~/.config/pip|pip-config
+#~/.config/gradle|gradle-config
+#~/.gradle|gradle-dir
+
+# SSH/Security
+~/.ssh|ssh
+~/.gnupg|gnupg
+
+# User scripts
+~/bin|user-bin
+~/scripts|user-scripts
+~/dotfiles|dotfiles
+~/.local/bin|local-bin
+
+# Fonts/Themes
+~/.fonts|fonts
+~/.local/share/fonts|local-fonts
+~/.themes|themes
+~/.icons|icons
+~/.local/share/themes|local-themes
+~/.local/share/icons|local-icons
+~/.gtkrc-2.0|gtkrc-2.0
+
+# Apps
+~/.config/htop|htop
+~/.config/fontconfig|fontconfig
+~/.config/Thunderbird|thunderbird
+~/.config/filezilla|filezilla
+~/.local/share/DBeaverData|dbeaver
+~/.local/state|local-state
+
+# Other
+~/openconnect|openconnect-configs
+~/.k8slens|k8slens-config
