@@ -9,8 +9,17 @@ INCLUDE_COPY_HOOK=true
 INCLUDE_SUDO_COPY_HOOK=false
 CLEAN_INSTALL=false
 DIFF_FILES=false
+SYNC_DIFF=false
+NAGA_YES=false
 OPERATION=""
 ARCHIVE_PATH=""
+ARCHIVE1=""
+ARCHIVE2=""
+POSTINSTALL_DIR=""
+
+# Pipe-delimited list of "<source>:<glob>" exclusion patterns.
+# Populated by --exclude/-e flags; passed to step scripts via env.
+NAGA_EXCLUDES=""
 
 detect_system() {
     if [ -f /etc/arch-release ]; then
@@ -54,7 +63,9 @@ USAGE: $0 [OPTIONS] <operation> [archive_path]
 OPERATIONS:
     backup                      Create a system backup
     restore <archive>           Restore from backup archive
-    diff <archive1> [archive2]  Compare backups (or backup vs current system)
+    sync    <archive>           Restore only items that differ from current system
+    diff    <archive1> [archive2]
+                                Compare backups (or backup vs current system)
 
 OPTIONS:
     --no-pacman         Skip package list backup
@@ -66,30 +77,74 @@ OPTIONS:
     --sudo-copy         Include system files (requires sudo)
     --clean-install     Remove packages not in backup during restore
     --diff-files        Include file content diffs (slow)
+    --postinstall <dir> Run scripts from <dir> after restore/sync
+    --exclude <src:pat> Exclude items matching <pat> from source <src>.
+    -e        <src:pat> Shorthand for --exclude.
+                        Sources: pacman, aur, flatpak, snap, copy, sudo_copy
+                        Pattern supports wildcards: -e "aur:*-src"
+    -y, --yes           Skip pre-flight confirmation prompt
     -h, --help          Show help
 
 EXAMPLES:
     $0 backup
-    $0 backup --sudo-copy
+    $0 backup --sudo-copy -e aur:electron -e "aur:*-src"
     $0 restore backup.tar.gz
-    $0 diff old.tar.gz new.tar.gz
+    $0 restore backup.tar.gz --postinstall ./scripts
+    $0 sync    backup.tar.gz
+    $0 diff    backup.tar.gz
+    $0 diff    old.tar.gz new.tar.gz
 EOF
+}
+
+_add_exclude() {
+    local pattern="$1"
+    if [[ "$pattern" != *:* ]]; then
+        echo "❌ Error: --exclude pattern must be in 'source:name' format (got: $pattern)"
+        exit 1
+    fi
+    if [ -z "$NAGA_EXCLUDES" ]; then
+        NAGA_EXCLUDES="$pattern"
+    else
+        NAGA_EXCLUDES="${NAGA_EXCLUDES}|${pattern}"
+    fi
 }
 
 parse_args() {
     while [[ $# -gt 0 ]]; do
         case $1 in
-            --no-pacman) INCLUDE_PACMAN=false; shift ;;
-            --no-aur) INCLUDE_AUR=false; shift ;;
-            --no-flatpak) INCLUDE_FLATPAK=false; shift ;;
-            --no-snap) INCLUDE_SNAP=false; shift ;;
-            --no-desktop) INCLUDE_DESKTOP_CONFIGS=false; shift ;;
-            --no-copy-hooks) INCLUDE_COPY_HOOK=false; shift ;;
-            --sudo-copy) INCLUDE_SUDO_COPY_HOOK=true; shift ;;
-            --clean-install) CLEAN_INSTALL=true; shift ;;
-            --diff-files) DIFF_FILES=true; shift ;;
+            --no-pacman)      INCLUDE_PACMAN=false; shift ;;
+            --no-aur)         INCLUDE_AUR=false; shift ;;
+            --no-flatpak)     INCLUDE_FLATPAK=false; shift ;;
+            --no-snap)        INCLUDE_SNAP=false; shift ;;
+            --no-desktop)     INCLUDE_DESKTOP_CONFIGS=false; shift ;;
+            --no-copy-hooks)  INCLUDE_COPY_HOOK=false; shift ;;
+            --sudo-copy)      INCLUDE_SUDO_COPY_HOOK=true; shift ;;
+            --clean-install)  CLEAN_INSTALL=true; shift ;;
+            --diff-files)     DIFF_FILES=true; shift ;;
+            --yes|-y)         NAGA_YES=true; shift ;;
+            --exclude|-e)
+                if [ -n "$2" ]; then
+                    _add_exclude "$2"
+                    shift 2
+                else
+                    echo "❌ Error: --exclude requires a 'source:pattern' argument"
+                    exit 1
+                fi
+                ;;
+            --postinstall)
+                if [ -n "$2" ]; then
+                    POSTINSTALL_DIR="$2"
+                    shift 2
+                else
+                    echo "❌ Error: --postinstall requires a directory argument"
+                    exit 1
+                fi
+                ;;
             --help|-h) show_help; exit 0 ;;
-            backup) OPERATION="backup"; shift ;;
+            backup)
+                OPERATION="backup"
+                shift
+                ;;
             restore)
                 OPERATION="restore"
                 if [ -n "$2" ]; then
@@ -100,11 +155,22 @@ parse_args() {
                     exit 1
                 fi
                 ;;
+            sync)
+                OPERATION="restore"
+                SYNC_DIFF=true
+                if [ -n "$2" ]; then
+                    ARCHIVE_PATH="$2"
+                    shift 2
+                else
+                    echo "❌ Error: sync requires archive path"
+                    exit 1
+                fi
+                ;;
             diff)
                 OPERATION="diff"
                 if [ -n "$2" ]; then
                     ARCHIVE1="$2"
-                    if [ -n "$3" ]; then
+                    if [ -n "$3" ] && [[ "$3" != --* ]]; then
                         ARCHIVE2="$3"
                         shift 3
                     else
@@ -134,25 +200,30 @@ parse_args() {
 validate_system() {
     detect_system
     detect_desktop
-    
+
     if [ "$SYSTEM_TYPE" = "unknown" ]; then
         echo "⚠️  Warning: Unknown system type"
     fi
-    
+
     if [ "$OPERATION" = "restore" ] && [ -n "$ARCHIVE_PATH" ]; then
         if [ ! -f "$ARCHIVE_PATH" ]; then
             echo "❌ Error: Archive not found: $ARCHIVE_PATH"
             exit 1
         fi
     fi
+
+    if [ -n "$POSTINSTALL_DIR" ] && [ ! -d "$POSTINSTALL_DIR" ]; then
+        echo "❌ Error: Post-install directory not found: $POSTINSTALL_DIR"
+        exit 1
+    fi
 }
 
 check_dependencies() {
     local missing=()
-    
-    command -v tar >/dev/null 2>&1 || missing+=("tar")
+
+    command -v tar  >/dev/null 2>&1 || missing+=("tar")
     command -v gzip >/dev/null 2>&1 || missing+=("gzip")
-    
+
     if [ "$SYSTEM_TYPE" = "arch" ]; then
         command -v pacman >/dev/null 2>&1 || missing+=("pacman")
         if [ "$INCLUDE_AUR" = true ]; then
@@ -161,15 +232,15 @@ check_dependencies() {
     elif [ "$SYSTEM_TYPE" = "debian" ]; then
         command -v apt >/dev/null 2>&1 || missing+=("apt")
     fi
-    
+
     if [ "$INCLUDE_FLATPAK" = true ]; then
         command -v flatpak >/dev/null 2>&1 || echo "⚠️  flatpak not found, skipping"
     fi
-    
+
     if [ "$INCLUDE_SNAP" = true ]; then
         command -v snap >/dev/null 2>&1 || echo "⚠️  snap not found, skipping"
     fi
-    
+
     if [ ${#missing[@]} -gt 0 ]; then
         echo "❌ Error: Missing tools: ${missing[*]}"
         exit 1

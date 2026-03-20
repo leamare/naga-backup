@@ -12,25 +12,32 @@ USAGE: $0 <operation> [options] [arguments]
 OPERATIONS:
     backup [options]                    Create a system backup
     restore [options] <archive>         Restore from backup
-    diff [options] <archive1> [archive2] Compare backups
+    sync    [options] <archive>         Restore only changed/absent items
+    diff    [options] <archive1> [archive2]
+                                        Compare backups
 
 OPTIONS:
     --no-pacman         Skip package list
     --no-aur            Skip AUR packages
-    --no-flatpak        Skip Flatpak apps
-    --no-snap           Skip Snap packages
+    --no-flatpak        Skip Flatpak
+    --no-snap           Skip Snap
     --no-desktop        Skip desktop configs
     --no-copy-hooks     Skip user files
     --sudo-copy         Include system files (requires sudo)
     --clean-install     Remove packages not in backup
     --diff-files        Include file content diffs
+    --postinstall <dir> Run scripts from <dir> after restore/sync
+    --exclude <src:pat> Exclude matching items (also -e)
+    -y, --yes           Skip confirmation prompt
     -h, --help          Show help
 
 EXAMPLES:
     $0 backup
-    $0 backup --sudo-copy
+    $0 backup --sudo-copy -e "aur:*-src"
     $0 restore backup.tar.gz
-    $0 diff old.tar.gz new.tar.gz
+    $0 restore backup.tar.gz --postinstall ./my-scripts
+    $0 sync    backup.tar.gz
+    $0 diff    old.tar.gz new.tar.gz
 EOF
 }
 
@@ -38,7 +45,7 @@ OPERATION=""
 
 while [[ $# -gt 0 ]]; do
     case $1 in
-        backup|restore|diff)
+        backup|restore|sync|diff)
             OPERATION="$1"
             shift
             break
@@ -62,7 +69,8 @@ if [ -z "$OPERATION" ]; then
 fi
 
 case "$OPERATION" in
-    backup)  exec "$SCRIPT_DIR/backup.sh" backup "$@" ;;
+    backup)  exec "$SCRIPT_DIR/backup.sh"  backup  "$@" ;;
     restore) exec "$SCRIPT_DIR/restore.sh" restore "$@" ;;
-    diff)    exec "$SCRIPT_DIR/diff.sh" diff "$@" ;;
+    sync)    exec "$SCRIPT_DIR/restore.sh" sync    "$@" ;;
+    diff)    exec "$SCRIPT_DIR/diff.sh"    diff    "$@" ;;
 esac
