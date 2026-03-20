@@ -1,12 +1,27 @@
 #!/bin/bash
 # Step 2a: AUR packages (Arch Linux only)
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../lib/exclude.sh"
+
 backup_aur() {
     if [ "$SYSTEM_TYPE" = "arch" ] && [ "$INCLUDE_AUR" = true ]; then
         echo "[*] Backing up AUR packages..."
         if command -v yay >/dev/null 2>&1; then
-            yay -Qqm > "$OUTPUT_DIR/pkglist-aur.txt"
-            echo "✅ Exported $(wc -l < "$OUTPUT_DIR/pkglist-aur.txt") AUR packages"
+            local tmp count=0 skipped=0
+            tmp=$(mktemp)
+            yay -Qqm > "$tmp"
+            while IFS= read -r pkg; do
+                [ -z "$pkg" ] && continue
+                if is_excluded "aur" "$pkg"; then
+                    skipped=$((skipped + 1))
+                else
+                    echo "$pkg"
+                    count=$((count + 1))
+                fi
+            done < "$tmp" > "$OUTPUT_DIR/pkglist-aur.txt"
+            rm -f "$tmp"
+            echo "✅ Exported $count AUR packages${skipped:+ ($skipped excluded)}"
         else
             echo "⚠️  Warning: yay not found, skipping AUR backup"
         fi
@@ -24,7 +39,14 @@ restore_aur() {
                 comm -23 <(yay -Qqm | sort) <(sort "$OUTPUT_DIR/pkglist-aur.txt") | xargs -r yay -Rns --noconfirm
             fi
             echo "📦 Installing AUR packages..."
-            yay -S --needed - < "$OUTPUT_DIR/pkglist-aur.txt"
+            while read -r pkg; do
+                [[ -z "$pkg" ]] && continue
+                is_excluded "aur" "$pkg" && { echo "  ⏭️  Skipping excluded: $pkg"; continue; }
+                if [ "$SYNC_DIFF" = true ] && yay -Qq "$pkg" >/dev/null 2>&1; then
+                    continue
+                fi
+                yay -S --needed --noconfirm "$pkg" || echo "⚠️  Failed to install AUR package: $pkg"
+            done < "$OUTPUT_DIR/pkglist-aur.txt"
         else
             echo "⚠️  Warning: yay not found, skipping AUR restore"
         fi
@@ -33,7 +55,6 @@ restore_aur() {
     fi
 }
 
-# Main execution
 if [ "$OPERATION" = "backup" ]; then
     backup_aur
 elif [ "$OPERATION" = "restore" ]; then
