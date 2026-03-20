@@ -17,25 +17,79 @@ The process itself is based on the steps specified in `steps` folder.
 ./naga.sh backup
 # restore from backup
 ./naga.sh restore backup.tar.gz
+# restore only items that differ from the current system
+./naga.sh sync backup.tar.gz
 # compare backup with the current system's state
 ./naga.sh diff backup.tar.gz
+# compare two backups
+./naga.sh diff old.tar.gz new.tar.gz
 ```
 
 ## Options
 
 ```
---no-pacman         Skip package list
---no-aur            Skip AUR packages
---no-flatpak        Skip Flatpak
---no-snap           Skip Snap
---no-desktop        Skip desktop configs
---no-copy-hooks     Skip user files
---sudo-copy         Include system files (requires sudo)
---clean-install     Remove packages not in backup during restore
---diff-files        Include file content diffs
+--no-pacman          Skip package list
+--no-aur             Skip AUR packages
+--no-flatpak         Skip Flatpak
+--no-snap            Skip Snap
+--no-desktop         Skip desktop configs
+--no-copy-hooks      Skip user files
+--sudo-copy          Include system files (requires sudo)
+--clean-install      Remove packages not in backup during restore
+--diff-files         Include file content diffs
+--exclude <src:path> Exclude items matching <path> from <src> (also -e)
+--postinstall <dir>  Run scripts from <dir> after restore / sync
+-y, --yes            Skip pre-flight confirmation prompt
 ```
 
-## Options
+## Exclusions
+
+Use `--exclude` (or `-e`) to skip specific items during backup or restore.
+The format is `source:pattern`, where wildcards are supported.
+
+```bash
+# skip a specific AUR package
+./naga.sh backup -e aur:electron
+
+# skip all AUR source packages
+./naga.sh backup -e "aur:*-src"
+
+# skip a copy-list entry by its alias
+./naga.sh backup -e copy:thunderbird
+
+# multiple exclusions
+./naga.sh backup -e "aur:*-src" -e copy:thunderbird -e flatpak:org.mozilla.firefox
+```
+
+Valid sources: `pacman`, `aur`, `flatpak`, `snap`, `copy`, `sudo_copy`
+
+## Sync Mode
+
+`sync` is like `restore` but only processes items that have changed or are missing
+on the current system:
+
+```bash
+./naga.sh sync backup.tar.gz
+```
+
+## Post-install Scripts
+
+Pass `--postinstall <dir>` to run a set of shell scripts after a restore or sync:
+
+```bash
+./naga.sh restore backup.tar.gz --postinstall ./post-scripts
+```
+
+Scripts in the directory are executed in the order specified by an optional
+`.order` file. Scripts not listed in `.order` are appended after the ordered ones in the default order.
+
+Example `.order`:
+```
+# run these first
+10_repos.sh
+20_dotfiles.sh
+# 30_optional.sh
+```
 
 ## Copy Lists
 
@@ -48,4 +102,3 @@ Types of copy lists:
 
 - `copy_list.conf` — User files
 - `sudo_copy_list.conf` — System files (requires sudo, enable with `--sudo-copy`)
-
