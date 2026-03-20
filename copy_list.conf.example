@@ -11,6 +11,7 @@
 # ~/.zsh_profile|zsh_profile
 # ~/.profile|profile
 # ~/.inputrc|inputrc
+~/.config/fastfetch|fastfetch
 
 # Editors
 ~/.vimrc|vimrc

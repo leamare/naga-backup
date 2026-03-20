@@ -3,6 +3,9 @@ set -e
 
 source ./lib/ui.sh
 source ./lib/cli.sh
+source ./lib/exclude.sh
+source ./lib/postinstall.sh
+source ./lib/preflight.sh
 
 parse_args "$@"
 validate_system
@@ -17,12 +20,18 @@ DATE=$(date +%Y%m%d_%H%M%S)
 ARCHIVE_NAME="backup_config_${HOSTNAME}_${DATE}.tar.gz"
 FINAL_ARCHIVE="$OUTPUT_DIR/$ARCHIVE_NAME"
 
+echo "📦 Starting backup..."
+echo "🔍 System: $SYSTEM_TYPE ($PACKAGE_MANAGER)"
+echo "🖥️  Desktop: $DESKTOP_ENV"
+
+show_backup_preflight
+
 TEMP_BACKUP_DIR=$(mktemp -d -p "$OUTPUT_DIR" .backup.XXXXXX)
 
-echo "SYSTEM_TYPE=$SYSTEM_TYPE" > "$TEMP_BACKUP_DIR/system-info.txt"
-echo "DESKTOP_ENV=$DESKTOP_ENV" >> "$TEMP_BACKUP_DIR/system-info.txt"
+echo "SYSTEM_TYPE=$SYSTEM_TYPE"    > "$TEMP_BACKUP_DIR/system-info.txt"
+echo "DESKTOP_ENV=$DESKTOP_ENV"   >> "$TEMP_BACKUP_DIR/system-info.txt"
 echo "PACKAGE_MANAGER=$PACKAGE_MANAGER" >> "$TEMP_BACKUP_DIR/system-info.txt"
-echo "HOSTNAME=$HOSTNAME" >> "$TEMP_BACKUP_DIR/system-info.txt"
+echo "HOSTNAME=$HOSTNAME"         >> "$TEMP_BACKUP_DIR/system-info.txt"
 echo "BACKUP_DATE=$(date -Iseconds)" >> "$TEMP_BACKUP_DIR/system-info.txt"
 
 step_scripts=()
@@ -36,11 +45,6 @@ step_scripts=()
 step_count=${#step_scripts[@]}
 step_index=1
 
-echo "📦 Starting backup..."
-echo "🔍 System: $SYSTEM_TYPE ($PACKAGE_MANAGER)"
-echo "🖥️  Desktop: $DESKTOP_ENV"
-echo ""
-
 for script in "${step_scripts[@]}"; do
     script_name=$(basename "$script")
     draw_progress_bar $((step_index - 1)) "$step_count"
@@ -52,7 +56,8 @@ for script in "${step_scripts[@]}"; do
        INCLUDE_AUR="$INCLUDE_AUR" INCLUDE_FLATPAK="$INCLUDE_FLATPAK" \
        INCLUDE_SNAP="$INCLUDE_SNAP" INCLUDE_DESKTOP_CONFIGS="$INCLUDE_DESKTOP_CONFIGS" \
        INCLUDE_COPY_HOOK="$INCLUDE_COPY_HOOK" INCLUDE_SUDO_COPY_HOOK="$INCLUDE_SUDO_COPY_HOOK" \
-       CLEAN_INSTALL="$CLEAN_INSTALL" bash "$script"; then
+       CLEAN_INSTALL="$CLEAN_INSTALL" NAGA_EXCLUDES="$NAGA_EXCLUDES" \
+       bash "$script"; then
         printf " ✔️\n"
     else
         printf " ❌\n"
