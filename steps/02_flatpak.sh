@@ -10,13 +10,14 @@ backup_flatpak() {
         if command -v flatpak >/dev/null 2>&1; then
             local tmp count=0 skipped=0
             tmp=$(mktemp)
-            flatpak list --app --columns=application > "$tmp"
-            while IFS= read -r app; do
+            # Save app ID and installation scope (user/system) as "app|scope"
+            flatpak list --app --columns=application,installation > "$tmp"
+            while IFS=$'\t' read -r app install; do
                 [ -z "$app" ] && continue
                 if is_excluded "flatpak" "$app"; then
                     skipped=$((skipped + 1))
                 else
-                    echo "$app"
+                    echo "${app}|${install}"
                     count=$((count + 1))
                 fi
             done < "$tmp" > "$OUTPUT_DIR/flatpak-apps.txt"
@@ -54,14 +55,21 @@ restore_flatpak() {
                 done
             fi
 
-            while read -r app; do
-                [ -z "$app" ] && continue
+            while IFS= read -r line; do
+                [ -z "$line" ] && continue
+                if [[ "$line" == *"|"* ]]; then
+                    app="${line%%|*}"
+                    scope="${line#*|}"
+                else
+                    app="$line"
+                    scope="user"
+                fi
                 is_excluded "flatpak" "$app" && { echo "  ⏭️  Skipping excluded: $app"; continue; }
                 if [ "$SYNC_DIFF" = true ] && flatpak info "$app" >/dev/null 2>&1; then
                     continue
                 fi
-                echo "📦 Installing flatpak app: $app"
-                flatpak install -y --noninteractive flathub "$app" 2>/dev/null || echo "⚠️  Failed to install: $app"
+                echo "📦 Installing flatpak app: $app (--${scope})"
+                flatpak install -y --noninteractive "--${scope}" flathub "$app" || echo "⚠️  Failed to install: $app"
             done < "$OUTPUT_DIR/flatpak-apps.txt"
         else
             echo "⚠️  Warning: flatpak not found, skipping flatpak restore"
