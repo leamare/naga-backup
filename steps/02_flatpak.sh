@@ -62,7 +62,7 @@ restore_flatpak() {
                     scope="${line#*|}"
                 else
                     app="$line"
-                    scope="user"
+                    scope="system"
                 fi
                 is_excluded "flatpak" "$app" && { echo "  ⏭️  Skipping excluded: $app"; continue; }
                 if [ "$SYNC_DIFF" = true ] && flatpak info "$app" >/dev/null 2>&1; then
